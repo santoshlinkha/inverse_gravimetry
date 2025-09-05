@@ -8,10 +8,10 @@ disp("Section 0 Start")
 % =========================================================================
 a = 3;
 b = 2;
-n = 4;
+n = 5;
 
 harmonic_moments = zeros(3, 2*n);
-center = 2 + 2i;
+center = 0 + 0i;
 for k=0:(2*n-1)    
     harmonic_moments(1, k+1) = integral2( ...
             @(r, t) (a*r.*cos(t) + 1i*b*r.*sin(t) + center).^k.*r * a*b, ...
@@ -71,7 +71,7 @@ disp("Section 2 Complete");
 % 2. Use fsolve to solve for the non-linear complex equations
 % =========================================================================
 
-initGuess = zeros(4*n,1);
+initGuess = zeros(2*n,1);
 
 w_n = abs(sum(cList));
 r_k = sqrt(abs(cList)/pi);
@@ -79,12 +79,12 @@ initGuess(1:n) = sqrt(w_n) * r_k / sum(sqrt(abs(cList)));
 
 
 % Solve with fsolve (suppress output)
-options = optimoptions('fsolve', 'Display', 'none', 'MaxFunEvals',1e6,'MaxIter',1e5, 'TolFun', 1e-9);
+options = optimoptions('fsolve', 'Display', 'none', 'MaxFunEvals',1e10,'MaxIter',1e10, 'TolFun', 1e-9);
 [sol,fval,exitflag] = fsolve(@(vars) regionPts(vars, zList, cList, n), initGuess, options);
 
 % Extract solutions
-xSol = sol(1:n) + 1i*sol(n+1:2*n);
-lSol = sol(2*n+1:3*n) + 1i*sol(3*n+1:4*n);
+xSol = sol(1:n);
+lSol = sol(n+1:2*n);
 
 disp("x values");
 disp(xSol);
@@ -148,8 +148,8 @@ figure;
 ellipse_x = a*cos(linspace(0, 2*pi, no_of_pts)) + real(center);
 ellipse_y = b*sin(linspace(0, 2*pi, no_of_pts)) + imag(center);
 
-plot(ellipse_x, ellipse_y, 'b');
-hold on;
+% plot(ellipse_x, ellipse_y, 'b:');
+% hold on;
 plot(real(region_pts), imag(region_pts), 'r');
 grid on; axis equal;
 
@@ -175,8 +175,10 @@ end
 % =========================================================================
 function F = regionPts(vars, zList, cList, n)
     % Split unknowns into complex vectors
-    x = vars(1:n) + 1i*vars(n+1:2*n);
-    l = vars(2*n+1:3*n) + 1i*vars(3*n+1:4*n);
+    % x = vars(1:n) + 1i*vars(n+1:2*n);
+    % l = vars(2*n+1:3*n) + 1i*vars(3*n+1:4*n);
+    x = vars(1:n);
+    l = vars(n+1:2*n);
 
     % Initialize residuals
     zEqns = zeros(1,n);
@@ -197,5 +199,5 @@ function F = regionPts(vars, zList, cList, n)
         end
         cEqns(k) = sumExpr2 - cList(k);
     end
-    F = [real(zEqns) imag(zEqns) real(cEqns) imag(cEqns)];
+    F = [zEqns cEqns];
 end

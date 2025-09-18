@@ -8,17 +8,16 @@ disp("Section 0 Start")
 % =========================================================================
 a = 3;
 b = 2;
-n = 5;
+n = 4;
 
 harmonic_moments = zeros(3, 2*n);
-center = 0 + 0i;
+center = -5 + 6*1i;
 for k=0:(2*n-1)    
     harmonic_moments(1, k+1) = integral2( ...
             @(r, t) (a*r.*cos(t) + 1i*b*r.*sin(t) + center).^k.*r * a*b, ...
             0, 1, 0, 2*pi, 'AbsTol',1e-4,'RelTol',1e-2 ...
         );
 end
-
 
 prony_mat = zeros(n+1, n+1);
 
@@ -36,6 +35,8 @@ for i=1:n+1
     coeffs(i) = (-1)^(n+i+1)*det(prony_mat(1:n, [1:i-1, i+1:end]));
 end
 
+disp(coeffs)
+
 coeffs = flip(coeffs);
 
 
@@ -44,8 +45,12 @@ coeffs = flip(coeffs);
 % 2. Solve for the z_values and c_values
 % =========================================================================
 
+cm  = harmonic_moments(1,2)/harmonic_moments(1,1);
 zList = roots(coeffs);
 
+
+disp("z values");
+disp(zList);
 
 c_mat = ones(n, n);
 
@@ -56,6 +61,8 @@ end
 cList = c_mat \ harmonic_moments(1, 1:n).';
 cList = cList/pi;
 
+
+zList = roots(coeffs) - cm;
 
 for l = 0:2*n - 1
     harmonic_moments(2, l+1) = sum(cList .* zList.^l);
@@ -74,7 +81,7 @@ disp("Section 2 Complete");
 initGuess = zeros(2*n,1);
 
 w_n = abs(sum(cList));
-r_k = sqrt(abs(cList)/pi);
+r_k = sqrt(abs(cList));
 initGuess(1:n) = sqrt(w_n) * r_k / sum(sqrt(abs(cList)));
 
 
@@ -99,7 +106,9 @@ disp("Section 3 Complete")
 % solution but as long as it is within the tol range, it is fine.
 % =========================================================================
 
-zCheck = zeros(1,n);
+
+
+zCheck = zeros(1,n); 
 for k = 1:n
     sumExpr = 0;
     for j = 1:n
@@ -140,16 +149,16 @@ disc_pts = exp(1i*linspace(0, 2*pi, no_of_pts+1));
 % grid on; axis equal;
 
 
-region_pts = arrayfun(@(z) mapRegion(z, xSol, lSol), disc_pts);
+region_pts = arrayfun(@(z) mapRegion(z, xSol, lSol), disc_pts)  + cm;
 
 
-figure;
+figure;  
 
 ellipse_x = a*cos(linspace(0, 2*pi, no_of_pts)) + real(center);
 ellipse_y = b*sin(linspace(0, 2*pi, no_of_pts)) + imag(center);
 
-% plot(ellipse_x, ellipse_y, 'b:');
-% hold on;
+plot(ellipse_x, ellipse_y, 'b:');
+hold on;
 plot(real(region_pts), imag(region_pts), 'r');
 grid on; axis equal;
 
@@ -167,7 +176,6 @@ function G = mapRegion(z, xSol, lSol)
         G = G + conj(xSol(i)) * z / (1 - conj(lSol(i)) * z);
     end
 end
-
 
 % =========================================================================
 % This calculates the residue for the equation of the system. F solve is 
@@ -201,3 +209,61 @@ function F = regionPts(vars, zList, cList, n)
     end
     F = [zEqns cEqns];
 end
+
+
+% function out = quadrature(d)
+%     n = numel(d)/4;
+%     d = d(:).'; % row vector
+%     x = d(1:n) + 1i*d(n+1:2*n);
+%     l = d(2*n+1:3*n) + 1i*d(3*n+1:4*n);
+
+%     z_val = zeros(1, n);
+%     c_val = zeros(1, n);
+
+%     for k = 1:n
+%         z_val(k) = sum( l(k) * conj(x) ./ (1 - l(k) * conj(l)) );
+%         c_val(k) = sum( x(k) * conj(x) ./ (1 - l(k) * conj(l)).^2 );
+%     end
+
+%     out = reshape([real(z_val), imag(z_val), real(c_val), imag(c_val)], 1, []);
+% end
+
+% function out = diff_quadrature(d, v)
+%     out = quadrature(d) - v;
+% end
+
+% function curr_pts = newton_step(init, v)
+%     max_iter = 10000;
+%     damping = 0.1;
+%     h = 1e-8;
+%     n = numel(init)/4;
+%     curr_pts = init(:).';
+
+%     for iter = 1:max_iter
+%         jac = zeros(4*n-1, 4*n-1);
+%         curr_val = diff_quadrature(curr_pts, v);
+
+%         for i = 1:(4*n-1)
+%             t = zeros(1, 4*n);
+%             t(i) = h;
+%             diff_val = (diff_quadrature(curr_pts + t, v) - curr_val) / h;
+%             jac(:, i) = diff_val(1:end-1).';
+%         end
+
+%         try
+%             step = curr_pts(1:end-1) - damping * (jac \ curr_val(1:end-1).');
+%             cond1 = norm(step - curr_pts(1:end-1));
+%             curr_pts(1:end-1) = step.';
+%             cond2 = norm(diff_quadrature(curr_pts, v));
+
+%             if cond2 < 1e-15 && cond1 < 1e-14
+%                 fprintf("Converged in %d iterations.\n", iter);
+%                 return;
+%             end
+%         catch
+%             fprintf("Linear algebra error occurred at iteration %d\n", iter);
+%             break;
+%         end
+%     end
+%     fprintf("Stopped after %d iterations\n", iter);
+% end
